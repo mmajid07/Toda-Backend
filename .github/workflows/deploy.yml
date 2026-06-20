@@ -41,7 +41,7 @@ jobs:
         continue-on-error: true
 
       - name: 🧹 Run tests
-        run: npm test --if-present
+        run: npm run test --if-present
         continue-on-error: true
 
       - name: 🐳 Set up Docker Buildx
@@ -57,11 +57,6 @@ jobs:
       - name: 🔑 Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-
-      - name: 📦 Create ECR repository if not exists
-        run: |
-          aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY }} --region ${{ env.AWS_REGION }} || \
-          aws ecr create-repository --repository-name ${{ env.ECR_REPOSITORY }} --region ${{ env.AWS_REGION }}
 
       - name: 🏗️ Build and push Docker image
         uses: docker/build-push-action@v5
