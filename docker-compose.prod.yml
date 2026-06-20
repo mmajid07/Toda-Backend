@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: todo-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - todo-network
+
+  todo-app:
+    image: 400024183686.dkr.ecr.us-east-1.amazonaws.com/todo-app:latest
+    container_name: todo-app
+    ports:
+      - "3005:3005"
+    environment:
+      - NODE_ENV=production
+      - PORT=3005
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SESSION_SECRET=your-super-secret-key-change-in-production
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - todo-network
+
+volumes:
+  redis-data:
+    driver: local
+
+networks:
+  todo-network:
+    driver: bridge

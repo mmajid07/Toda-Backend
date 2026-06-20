@@ -110,7 +110,7 @@ jobs:
   deploy-ec2:
     needs: build
     runs-on: ubuntu-latest
-    if: false # disabled until EC2 instance is created
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
       contents: read
 
@@ -125,7 +125,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: 📋 Get EC2 instance info
+      - name: 📋 Get EC2 instance IP
         run: |
           INSTANCE_IP=$(aws ec2 describe-instances \
             --filters "Name=tag:Name,Values=todo-app-instance" "Name=instance-state-name,Values=running" \
@@ -140,14 +140,19 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ env.INSTANCE_IP }} >> ~/.ssh/known_hosts
 
-      - name: 📤 Deploy to EC2
+      - name: 📤 Copy docker-compose.prod.yml to EC2
+        run: |
+          scp -i ~/.ssh/id_rsa docker-compose.prod.yml ec2-user@${{ env.INSTANCE_IP }}:/home/ec2-user/docker-compose.prod.yml
+
+      - name: 🚀 Deploy on EC2
         run: |
           ssh -i ~/.ssh/id_rsa ec2-user@${{ env.INSTANCE_IP }} << 'EOF'
-          cd /home/ec2-user/todo-app
-          git pull origin main
-          docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-          docker-compose down
-          docker-compose up -d
+            aws ecr get-login-password --region us-east-1 | \
+              docker login --username AWS --password-stdin \
+              400024183686.dkr.ecr.us-east-1.amazonaws.com
+            docker pull 400024183686.dkr.ecr.us-east-1.amazonaws.com/todo-app:latest
+            docker-compose -f /home/ec2-user/docker-compose.prod.yml down
+            docker-compose -f /home/ec2-user/docker-compose.prod.yml up -d
           EOF
 
       - name: 🧹 Clean up SSH key
