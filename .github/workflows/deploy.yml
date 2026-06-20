@@ -140,17 +140,22 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --parameters '{"commands":[
               "set -e",
-              "echo [1/5] Logging into ECR...",
+              "echo [0/6] Installing docker-compose if missing...",
+              "if ! command -v docker-compose &> /dev/null; then curl -fsSL -o /usr/local/bin/docker-compose https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) && chmod +x /usr/local/bin/docker-compose; fi",
+              "docker-compose --version",
+              "echo [1/6] Logging into ECR...",
               "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 400024183686.dkr.ecr.us-east-1.amazonaws.com",
-              "echo [2/5] Downloading latest docker-compose.prod.yml...",
+              "echo [2/6] Downloading latest docker-compose.prod.yml...",
               "curl -fsSL -o /home/ec2-user/docker-compose.prod.yml https://raw.githubusercontent.com/mmajid07/Toda-Backend/main/docker-compose.prod.yml",
-              "echo [3/5] Pulling latest image...",
+              "echo [3/6] Pulling latest image...",
               "docker pull 400024183686.dkr.ecr.us-east-1.amazonaws.com/todo-app:latest",
-              "echo [4/5] Stopping old containers...",
+              "echo [4/6] Stopping old containers...",
               "docker-compose -f /home/ec2-user/docker-compose.prod.yml down || true",
-              "echo [5/5] Starting containers...",
+              "echo [5/6] Starting containers...",
               "docker-compose -f /home/ec2-user/docker-compose.prod.yml up -d",
-              "echo Done! App is running."
+              "echo [6/6] Running containers:",
+              "docker ps",
+              "echo Done! Deployment successful."
             ]}' \
             --region ${{ env.AWS_REGION }} \
             --query "Command.CommandId" \
@@ -159,17 +164,37 @@ jobs:
           echo "SSM Command ID: $COMMAND_ID"
           echo "Waiting for command to complete..."
 
-          aws ssm wait command-executed \
-            --command-id "$COMMAND_ID" \
-            --instance-id "${{ env.INSTANCE_ID }}" \
-            --region ${{ env.AWS_REGION }}
+          for i in $(seq 1 30); do
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "${{ env.INSTANCE_ID }}" \
+              --region ${{ env.AWS_REGION }} \
+              --query "Status" --output text 2>/dev/null || echo "Pending")
+            echo "Status: $STATUS"
+            if [ "$STATUS" = "Success" ] || [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ]; then
+              break
+            fi
+            sleep 10
+          done
 
+          echo "--- Command Output ---"
           aws ssm get-command-invocation \
             --command-id "$COMMAND_ID" \
             --instance-id "${{ env.INSTANCE_ID }}" \
             --region ${{ env.AWS_REGION }} \
-            --query "{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}" \
-            --output table
+            --query "StandardOutputContent" --output text
+
+          echo "--- Command Errors ---"
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ env.INSTANCE_ID }}" \
+            --region ${{ env.AWS_REGION }} \
+            --query "StandardErrorContent" --output text
+
+          if [ "$STATUS" != "Success" ]; then
+            echo "Deployment failed with status: $STATUS"
+            exit 1
+          fi
 
   slack-notification:
     needs: [build]
