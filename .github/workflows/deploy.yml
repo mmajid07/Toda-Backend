@@ -151,6 +151,7 @@ jobs:
               "docker pull 400024183686.dkr.ecr.us-east-1.amazonaws.com/todo-app:latest",
               "echo [4/6] Stopping old containers...",
               "docker-compose -f /home/ec2-user/docker-compose.prod.yml down || true",
+              "docker rm -f todo-app todo-redis 2>/dev/null || true",
               "echo [5/6] Starting containers...",
               "docker-compose -f /home/ec2-user/docker-compose.prod.yml up -d",
               "echo [6/6] Running containers:",
