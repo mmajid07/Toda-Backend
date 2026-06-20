@@ -31,6 +31,17 @@ class Todo {
       updatedAt: this.updatedAt
     };
   }
+
+  toRedis() {
+    return {
+      id: this.id,
+      title: this.title,
+      description: this.description,
+      completed: String(this.completed),
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt
+    };
+  }
 }
 
 class RedisTodoStore {
@@ -46,7 +57,7 @@ class RedisTodoStore {
     
     try {
       // Store todo as hash in Redis
-      await this.redis.hSet(todoKey, todo.toJSON());
+      await this.redis.hSet(todoKey, todo.toRedis());
       // Add todo ID to list
       await this.redis.lPush(this.listKey, todo.id);
       // Set expiration
@@ -109,7 +120,7 @@ class RedisTodoStore {
       const todo = await this.getTodo(id);
       todo.update(title, description);
       
-      await this.redis.hSet(todoKey, todo.toJSON());
+      await this.redis.hSet(todoKey, todo.toRedis());
       return todo;
     } catch (error) {
       console.error('Error updating todo:', error);
@@ -129,7 +140,7 @@ class RedisTodoStore {
       todo.completed = !todo.completed;
       todo.updatedAt = new Date().toISOString();
       
-      await this.redis.hSet(todoKey, todo.toJSON());
+      await this.redis.hSet(todoKey, todo.toRedis());
       return todo;
     } catch (error) {
       console.error('Error toggling todo:', error);
