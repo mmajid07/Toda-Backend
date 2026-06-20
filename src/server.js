@@ -14,29 +14,38 @@ const app = express();
 const server = http.createServer(app);
 
 // Redis Setup
+const REDIS_HOST = process.env.REDIS_HOST || 'localhost';
+const REDIS_PORT = parseInt(process.env.REDIS_PORT) || 6379;
+console.log(`[Redis] Connecting to ${REDIS_HOST}:${REDIS_PORT}`);
+
 const redisClient = createClient({
   socket: {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT) || 6379,
+    host: REDIS_HOST,
+    port: REDIS_PORT,
   },
   password: process.env.REDIS_PASSWORD || undefined
 });
 
-redisClient.on('error', (err) => console.error('Redis client error:', err));
+redisClient.on('error', (err) => console.error('[Redis] client error:', err.message));
+redisClient.on('connect', () => console.log('[Redis] main client connecting...'));
+redisClient.on('ready', () => console.log('[Redis] main client ready'));
 
 const pubClient = redisClient.duplicate();
-pubClient.on('error', (err) => console.error('Redis pub client error:', err));
+pubClient.on('error', (err) => console.error('[Redis] pub client error:', err.message));
+pubClient.on('ready', () => console.log('[Redis] pub client ready'));
 
 const subClient = redisClient.duplicate();
-subClient.on('error', (err) => console.error('Redis sub client error:', err));
+subClient.on('error', (err) => console.error('[Redis] sub client error:', err.message));
+subClient.on('ready', () => console.log('[Redis] sub client ready'));
 
 // Connect to Redis
+console.log('[Redis] Starting all 3 client connections...');
 Promise.all([redisClient.connect(), pubClient.connect(), subClient.connect()])
   .then(() => {
-    console.log('✅ Redis connected successfully');
+    console.log('✅ Redis all 3 clients connected successfully');
   })
   .catch((err) => {
-    console.error('❌ Redis connection failed:', err);
+    console.error('❌ Redis connection failed:', err.message);
     process.exit(1);
   });
 
