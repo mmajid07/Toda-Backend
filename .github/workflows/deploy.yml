@@ -110,7 +110,7 @@ jobs:
   deploy-ec2:
     needs: build
     runs-on: ubuntu-latest
-    if: false # enable after SSM is configured on EC2
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
       contents: read
 
@@ -135,18 +135,41 @@ jobs:
 
       - name: 🚀 Deploy on EC2 via SSM
         run: |
-          aws ssm send-command \
+          COMMAND_ID=$(aws ssm send-command \
             --instance-ids "${{ env.INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
-            --parameters 'commands=[
+            --parameters '{"commands":[
+              "set -e",
+              "echo [1/5] Logging into ECR...",
               "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 400024183686.dkr.ecr.us-east-1.amazonaws.com",
-              "curl -o /home/ec2-user/docker-compose.prod.yml https://raw.githubusercontent.com/mmajid07/Toda-Backend/main/docker-compose.prod.yml",
+              "echo [2/5] Downloading latest docker-compose.prod.yml...",
+              "curl -fsSL -o /home/ec2-user/docker-compose.prod.yml https://raw.githubusercontent.com/mmajid07/Toda-Backend/main/docker-compose.prod.yml",
+              "echo [3/5] Pulling latest image...",
               "docker pull 400024183686.dkr.ecr.us-east-1.amazonaws.com/todo-app:latest",
-              "docker-compose -f /home/ec2-user/docker-compose.prod.yml down",
-              "docker-compose -f /home/ec2-user/docker-compose.prod.yml up -d"
-            ]' \
+              "echo [4/5] Stopping old containers...",
+              "docker-compose -f /home/ec2-user/docker-compose.prod.yml down || true",
+              "echo [5/5] Starting containers...",
+              "docker-compose -f /home/ec2-user/docker-compose.prod.yml up -d",
+              "echo Done! App is running."
+            ]}' \
             --region ${{ env.AWS_REGION }} \
-            --output text
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
+          echo "Waiting for command to complete..."
+
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ env.INSTANCE_ID }}" \
+            --region ${{ env.AWS_REGION }}
+
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ env.INSTANCE_ID }}" \
+            --region ${{ env.AWS_REGION }} \
+            --query "{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}" \
+            --output table
 
   slack-notification:
     needs: [build]
