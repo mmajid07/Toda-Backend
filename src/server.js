@@ -27,8 +27,11 @@ redisClient.on('error', (err) => console.error('Redis client error:', err));
 const pubClient = redisClient.duplicate();
 pubClient.on('error', (err) => console.error('Redis pub client error:', err));
 
+const subClient = redisClient.duplicate();
+subClient.on('error', (err) => console.error('Redis sub client error:', err));
+
 // Connect to Redis
-Promise.all([redisClient.connect(), pubClient.connect()])
+Promise.all([redisClient.connect(), pubClient.connect(), subClient.connect()])
   .then(() => {
     console.log('✅ Redis connected successfully');
   })
@@ -58,7 +61,7 @@ const io = socketIO(server, {
     origin: '*',
     methods: ['GET', 'POST']
   },
-  adapter: createAdapter(pubClient, redisClient)
+  adapter: createAdapter(pubClient, subClient)
 });
 
 // Share session between Express and Socket.io
@@ -133,6 +136,7 @@ process.on('SIGINT', async () => {
   server.close(async () => {
     await redisClient.quit();
     await pubClient.quit();
+    await subClient.quit();
     console.log('✅ Server shutdown complete');
     process.exit(0);
   });
