@@ -1,0 +1,142 @@
+require('dotenv').config();
+
+const express = require('express');
+const http = require('http');
+const socketIO = require('socket.io');
+const path = require('path');
+const session = require('express-session');
+const RedisStore = require('connect-redis').default;
+const { createClient } = require('redis');
+const { setupTodoEvents, setupTodoStore } = require('./socketHandlers/todoEvents');
+const { createAdapter } = require('@socket.io/redis-adapter');
+
+const app = express();
+const server = http.createServer(app);
+
+// Redis Setup
+const redisClient = createClient({
+  host: process.env.REDIS_HOST || 'localhost',
+  port: process.env.REDIS_PORT || 6379,
+  password: process.env.REDIS_PASSWORD || undefined
+});
+
+const pubClient = redisClient.duplicate();
+
+// Connect to Redis
+Promise.all([redisClient.connect(), pubClient.connect()])
+  .then(() => {
+    console.log('✅ Redis connected successfully');
+  })
+  .catch((err) => {
+    console.error('❌ Redis connection failed:', err);
+    process.exit(1);
+  });
+
+// Express Session Setup
+const sessionMiddleware = session({
+  store: new RedisStore({ client: redisClient }),
+  secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+});
+
+app.use(sessionMiddleware);
+
+// Socket.io Setup with Redis Adapter
+const io = socketIO(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST']
+  },
+  adapter: createAdapter(pubClient, redisClient)
+});
+
+// Share session between Express and Socket.io
+io.use((socket, next) => {
+  sessionMiddleware(socket.request, {}, next);
+});
+
+// Middleware
+app.use(express.json());
+app.use(express.static(path.join(__dirname, '../public')));
+
+// Setup todo store
+setupTodoStore(redisClient);
+
+// Routes
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
+// Health check
+app.get('/health', async (req, res) => {
+  try {
+    const redisHealth = await redisClient.ping();
+    res.json({
+      status: 'OK',
+      message: 'Todo server is running',
+      redis: redisHealth === 'PONG' ? 'connected' : 'disconnected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'ERROR',
+      message: 'Todo server health check failed',
+      redis: 'disconnected',
+      error: error.message
+    });
+  }
+});
+
+// Stats endpoint
+app.get('/stats', async (req, res) => {
+  try {
+    const info = await redisClient.info();
+    const connectedClients = io.engine.clientsCount;
+    
+    res.json({
+      connectedClients,
+      redis: info.split('\r\n').slice(0, 5).join('; ')
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Socket.io connection
+io.on('connection', (socket) => {
+  console.log(`✅ User connected: ${socket.id}`);
+  console.log(`📊 Connected clients: ${io.engine.clientsCount}`);
+
+  // Setup todo events
+  setupTodoEvents(io, socket);
+
+  // Handle errors
+  socket.on('error', (error) => {
+    console.error(`Socket error for ${socket.id}:`, error);
+  });
+});
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('\n🛑 Shutting down gracefully...');
+  server.close(async () => {
+    await redisClient.quit();
+    await pubClient.quit();
+    console.log('✅ Server shutdown complete');
+    process.exit(0);
+  });
+});
+
+// Start server
+const PORT = process.env.PORT || 3005;
+server.listen(PORT, () => {
+  console.log(`🚀 Todo server running on http://localhost:${PORT}`);
+  console.log(`📊 Open multiple tabs to see real-time updates!`);
+  console.log(`💾 Using Redis for data persistence and session storage`);
+});

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-Time Todo App</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📝 Real-Time Todo App</h1>
+      <p class="subtitle">Live updates with Socket.io</p>
+    </header>
+
+    <div class="main-content">
+      <!-- Input Section -->
+      <div class="input-section">
+        <input 
+          type="text" 
+          id="todoTitle" 
+          placeholder="Add a new todo..." 
+          class="todo-input"
+        >
+        <textarea 
+          id="todoDescription" 
+          placeholder="Add description (optional)" 
+          class="todo-description"
+          rows="2"
+        ></textarea>
+        <button id="addBtn" class="btn btn-primary">Add Todo</button>
+      </div>
+
+      <!-- Stats Section -->
+      <div class="stats-section">
+        <div class="stat">
+          <span class="stat-label">Total:</span>
+          <span id="totalTodos" class="stat-value">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Completed:</span>
+          <span id="completedTodos" class="stat-value">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Pending:</span>
+          <span id="pendingTodos" class="stat-value">0</span>
+        </div>
+      </div>
+
+      <!-- Filter Section -->
+      <div class="filter-section">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="active">Active</button>
+        <button class="filter-btn" data-filter="completed">Completed</button>
+        <button id="clearCompletedBtn" class="btn btn-danger">Clear Completed</button>
+      </div>
+
+      <!-- Todos List -->
+      <div id="todosList" class="todos-list"></div>
+
+      <!-- Empty State -->
+      <div id="emptyState" class="empty-state">
+        <p>📭 No todos yet. Start by adding one!</p>
+      </div>
+    </div>
+
+    <!-- Connection Status -->
+    <div id="connectionStatus" class="connection-status">
+      <span class="status-dot"></span>
+      <span id="statusText">Connecting...</span>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/client.js"></script>
+</body>
+</html>
