@@ -77,7 +77,7 @@ jobs:
   deploy-ecs:
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: false # disabled until ECS cluster is created
     permissions:
       contents: read
 
@@ -115,7 +115,7 @@ jobs:
   deploy-ec2:
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: false # disabled until EC2 instance is created
     permissions:
       contents: read
 
