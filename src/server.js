@@ -15,12 +15,17 @@ const server = http.createServer(app);
 
 // Redis Setup
 const redisClient = createClient({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: process.env.REDIS_PORT || 6379,
+  socket: {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT) || 6379,
+  },
   password: process.env.REDIS_PASSWORD || undefined
 });
 
+redisClient.on('error', (err) => console.error('Redis client error:', err));
+
 const pubClient = redisClient.duplicate();
+pubClient.on('error', (err) => console.error('Redis pub client error:', err));
 
 // Connect to Redis
 Promise.all([redisClient.connect(), pubClient.connect()])
