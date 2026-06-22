@@ -27,7 +27,7 @@ function setupTodoEvents(io, socket) {
   socket.on('addTodo', async (data) => {
     console.log(`[addTodo] Request from socket: ${socket.id} | data:`, data);
     try {
-      const { title, description } = data;
+      const { title, description, priority } = data;
       if (!title || title.trim() === '') {
         console.warn('[addTodo] Rejected - empty title');
         socket.emit('error', 'Todo title cannot be empty');
@@ -35,7 +35,7 @@ function setupTodoEvents(io, socket) {
       }
 
       console.log('[addTodo] Calling todoStore.addTodo...');
-      const todo = await todoStore.addTodo(title, description || '');
+      const todo = await todoStore.addTodo(title, description || '', priority || 'medium');
       console.log(`[addTodo] Broadcasting todoAdded to all clients | id: ${todo.id}`);
       io.emit('todoAdded', todo.toJSON());
     } catch (error) {

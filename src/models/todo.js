@@ -1,10 +1,11 @@
 const { v4: uuidv4 } = require('uuid');
 
 class Todo {
-  constructor(title, description = '') {
+  constructor(title, description = '', priority = 'medium') {
     this.id = uuidv4();
     this.title = title;
     this.description = description;
+    this.priority = priority;
     this.completed = false;
     this.createdAt = new Date().toISOString();
     this.updatedAt = new Date().toISOString();
@@ -26,6 +27,7 @@ class Todo {
       id: this.id,
       title: this.title,
       description: this.description,
+      priority: this.priority,
       completed: this.completed,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
@@ -37,6 +39,7 @@ class Todo {
       id: this.id,
       title: this.title,
       description: this.description,
+      priority: this.priority,
       completed: String(this.completed),
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
@@ -52,10 +55,10 @@ class RedisTodoStore {
     console.log('[TodoStore] Initialized with Redis client');
   }
 
-  async addTodo(title, description) {
-    const todo = new Todo(title, description);
+  async addTodo(title, description, priority = 'medium') {
+    const todo = new Todo(title, description, priority);
     const todoKey = `${this.prefix}${todo.id}`;
-    console.log(`[addTodo] START - title: "${title}" | key: ${todoKey}`);
+    console.log(`[addTodo] START - title: "${title}" | priority: "${priority}" | key: ${todoKey}`);
 
     try {
       console.log('[addTodo] Step 1 - Saving to Redis hash...');

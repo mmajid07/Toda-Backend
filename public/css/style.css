@@ -14,26 +14,47 @@
   --border-color: #bdc3c7;
   --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   --transition: all 0.3s ease;
+  --priority-high: #e74c3c;
+  --priority-medium: #f39c12;
+  --priority-low: #27ae60;
+  --bg-primary: #ffffff;
+  --bg-secondary: #ecf0f1;
+  --text-primary: #2c3e50;
+  --text-secondary: #7f8c8d;
+  --bg-body: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+[data-theme="dark"] {
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #2d2d2d;
+  --text-primary: #e8e8e8;
+  --text-secondary: #b0b0b0;
+  --light-bg: #2d2d2d;
+  --dark-text: #e8e8e8;
+  --border-color: #404040;
+  --bg-body: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
 }
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--bg-body);
   min-height: 100vh;
   padding: 20px;
-  color: var(--dark-text);
+  color: var(--text-primary);
+  transition: var(--transition);
 }
 
 .container {
   max-width: 800px;
   margin: 0 auto;
-  background: white;
+  background: var(--bg-primary);
   border-radius: 15px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
   overflow: hidden;
   display: flex;
   flex-direction: column;
   min-height: 90vh;
+  transition: var(--transition);
 }
 
 header {
@@ -41,6 +62,40 @@ header {
   color: white;
   padding: 30px 20px;
   text-align: center;
+  transition: var(--transition);
+}
+
+[data-theme="dark"] header {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+
+.header-top {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  position: relative;
+}
+
+.theme-toggle {
+  position: absolute;
+  right: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 1.2em;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
 }
 
 header h1 {
@@ -69,14 +124,51 @@ header h1 {
   margin-bottom: 30px;
 }
 
+.priority-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.priority-section label {
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.priority-select {
+  flex: 1;
+  padding: 10px 12px;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 1em;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: var(--transition);
+  font-weight: 600;
+}
+
+.priority-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.priority-select:hover {
+  border-color: var(--primary-color);
+}
+
 .todo-input,
 .todo-description {
   padding: 12px 15px;
-  border: 2px solid var(--light-bg);
+  border: 2px solid var(--border-color);
   border-radius: 8px;
   font-size: 1em;
   transition: var(--transition);
   font-family: inherit;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 .todo-input:focus,
@@ -143,15 +235,16 @@ header h1 {
 .stat {
   text-align: center;
   padding: 15px;
-  background: var(--light-bg);
+  background: var(--bg-secondary);
   border-radius: 10px;
   flex: 1;
+  transition: var(--transition);
 }
 
 .stat-label {
   display: block;
   font-size: 0.9em;
-  color: #7f8c8d;
+  color: var(--text-secondary);
   margin-bottom: 5px;
 }
 
@@ -175,13 +268,13 @@ header h1 {
 .filter-btn {
   padding: 10px 18px;
   border: 2px solid var(--border-color);
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 20px;
   cursor: pointer;
   font-size: 0.95em;
   font-weight: 600;
   transition: var(--transition);
-  color: var(--dark-text);
+  color: var(--text-primary);
 }
 
 .filter-btn:hover {
@@ -203,7 +296,7 @@ header h1 {
 }
 
 .todo-item {
-  background: var(--light-bg);
+  background: var(--bg-secondary);
   border-left: 4px solid var(--primary-color);
   padding: 15px;
   border-radius: 8px;
@@ -212,6 +305,18 @@ header h1 {
   gap: 12px;
   transition: var(--transition);
   animation: slideIn 0.3s ease;
+}
+
+.todo-item.priority-high {
+  border-left-color: var(--priority-high);
+}
+
+.todo-item.priority-medium {
+  border-left-color: var(--priority-medium);
+}
+
+.todo-item.priority-low {
+  border-left-color: var(--priority-low);
 }
 
 @keyframes slideIn {
@@ -262,7 +367,7 @@ header h1 {
 
 .todo-description {
   font-size: 0.9em;
-  color: #7f8c8d;
+  color: var(--text-secondary);
   margin-bottom: 8px;
   word-break: break-word;
   line-height: 1.4;
@@ -270,7 +375,19 @@ header h1 {
 
 .todo-meta {
   font-size: 0.8em;
-  color: #95a5a6;
+  color: var(--text-secondary);
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.priority-badge {
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75em;
+  text-transform: uppercase;
+  background: rgba(0, 0, 0, 0.1);
 }
 
 .todo-actions {
@@ -286,7 +403,7 @@ header h1 {
   font-size: 0.85em;
   font-weight: 600;
   transition: var(--transition);
-  background: white;
+  background: var(--bg-primary);
   border: 1px solid var(--border-color);
 }
 
@@ -312,9 +429,14 @@ header h1 {
 
 /* Edit Mode */
 .todo-item.edit-mode {
-  background: #fff9e6;
+  background: var(--warning-color);
   border-left-color: var(--warning-color);
   flex-direction: column;
+  opacity: 0.95;
+}
+
+[data-theme="dark"] .todo-item.edit-mode {
+  background: rgba(243, 156, 18, 0.15);
 }
 
 .edit-input,
@@ -326,6 +448,9 @@ header h1 {
   font-size: 1em;
   font-family: inherit;
   margin-bottom: 10px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: var(--transition);
 }
 
 .edit-input:focus,
@@ -345,7 +470,7 @@ header h1 {
 .empty-state {
   text-align: center;
   padding: 60px 20px;
-  color: #95a5a6;
+  color: var(--text-secondary);
   font-size: 1.1em;
 }
 
@@ -355,10 +480,11 @@ header h1 {
   align-items: center;
   gap: 8px;
   padding: 15px 20px;
-  background: #ecf0f1;
+  background: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
   font-size: 0.9em;
-  color: var(--dark-text);
+  color: var(--text-primary);
+  transition: var(--transition);
 }
 
 .status-dot {

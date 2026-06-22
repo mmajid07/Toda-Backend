@@ -4,6 +4,7 @@ const socket = io();
 // DOM Elements
 const todoInput = document.getElementById('todoTitle');
 const descriptionInput = document.getElementById('todoDescription');
+const prioritySelect = document.getElementById('todoPriority');
 const addBtn = document.getElementById('addBtn');
 const todosList = document.getElementById('todosList');
 const emptyState = document.getElementById('emptyState');
@@ -14,10 +15,29 @@ const filterButtons = document.querySelectorAll('.filter-btn');
 const totalTodosEl = document.getElementById('totalTodos');
 const completedTodosEl = document.getElementById('completedTodos');
 const pendingTodosEl = document.getElementById('pendingTodos');
+const themeToggle = document.getElementById('themeToggle');
 
 // State
 let todos = [];
 let currentFilter = 'all';
+let currentTheme = localStorage.getItem('theme') || 'light';
+
+// Initialize Theme
+function initTheme() {
+  document.documentElement.setAttribute('data-theme', currentTheme);
+  updateThemeToggleButton();
+}
+
+function toggleTheme() {
+  currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+  localStorage.setItem('theme', currentTheme);
+  document.documentElement.setAttribute('data-theme', currentTheme);
+  updateThemeToggleButton();
+}
+
+function updateThemeToggleButton() {
+  themeToggle.textContent = currentTheme === 'light' ? '🌙' : '☀️';
+}
 
 // Socket Connection Events
 socket.on('connect', () => {
@@ -87,6 +107,7 @@ socket.on('completedCleared', (data) => {
 });
 
 // Event Listeners
+themeToggle.addEventListener('click', toggleTheme);
 addBtn.addEventListener('click', addTodo);
 todoInput.addEventListener('keypress', (e) => {
   if (e.key === 'Enter' && todoInput.value.trim()) {
@@ -113,13 +134,14 @@ filterButtons.forEach(btn => {
 function addTodo() {
   const title = todoInput.value.trim();
   const description = descriptionInput.value.trim();
+  const priority = prioritySelect.value;
 
   if (!title) {
     showNotification('Please enter a todo title', 'error');
     return;
   }
 
-  socket.emit('addTodo', { title, description });
+  socket.emit('addTodo', { title, description, priority });
 }
 
 function editTodo(id) {
@@ -184,6 +206,19 @@ function getFilteredTodos() {
   }
 }
 
+function getPriorityEmoji(priority) {
+  switch(priority) {
+    case 'high': return '🔴';
+    case 'medium': return '🟡';
+    case 'low': return '🟢';
+    default: return '🟡';
+  }
+}
+
+function getPriorityText(priority) {
+  return priority ? priority.charAt(0).toUpperCase() + priority.slice(1) : 'Medium';
+}
+
 function renderTodos() {
   const filtered = getFilteredTodos();
 
@@ -195,18 +230,19 @@ function renderTodos() {
 
   emptyState.style.display = 'none';
   todosList.innerHTML = filtered.map(todo => `
-    <div class="todo-item ${todo.completed ? 'completed' : ''}" id="todo-${todo.id}">
-      <input 
-        type="checkbox" 
-        class="todo-checkbox" 
-        ${todo.completed ? 'checked' : ''} 
+    <div class="todo-item ${todo.completed ? 'completed' : ''} priority-${todo.priority || 'medium'}" id="todo-${todo.id}">
+      <input
+        type="checkbox"
+        class="todo-checkbox"
+        ${todo.completed ? 'checked' : ''}
         onchange="toggleTodo('${todo.id}')"
       >
       <div class="todo-content">
         <div class="todo-title">${escapeHtml(todo.title)}</div>
         ${todo.description ? `<div class="todo-description">${escapeHtml(todo.description)}</div>` : ''}
         <div class="todo-meta">
-          Created: ${formatDate(new Date(todo.createdAt))}
+          <span>Created: ${formatDate(new Date(todo.createdAt))}</span>
+          <span class="priority-badge">${getPriorityEmoji(todo.priority || 'medium')} ${getPriorityText(todo.priority || 'medium')}</span>
         </div>
       </div>
       <div class="todo-actions">
@@ -243,6 +279,7 @@ function updateConnectionStatus(connected) {
 function clearInputs() {
   todoInput.value = '';
   descriptionInput.value = '';
+  prioritySelect.value = 'medium';
   todoInput.focus();
 }
 
@@ -268,5 +305,6 @@ function showNotification(message, type = 'info') {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
   clearInputs();
 });
