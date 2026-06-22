@@ -66,6 +66,7 @@ socket.on('todosList', (todoList) => {
 });
 
 socket.on('todoAdded', (todo) => {
+  console.log('📨 Received todoAdded event:', todo);
   todos.push(todo);
   renderTodos();
   updateStats();
@@ -74,6 +75,7 @@ socket.on('todoAdded', (todo) => {
 });
 
 socket.on('todoUpdated', (todo) => {
+  console.log('📨 Received todoUpdated event:', todo);
   const index = todos.findIndex(t => t.id === todo.id);
   if (index !== -1) {
     todos[index] = todo;
@@ -84,6 +86,7 @@ socket.on('todoUpdated', (todo) => {
 });
 
 socket.on('todoToggled', (todo) => {
+  console.log('📨 Received todoToggled event:', todo);
   const index = todos.findIndex(t => t.id === todo.id);
   if (index !== -1) {
     todos[index] = todo;
@@ -93,6 +96,7 @@ socket.on('todoToggled', (todo) => {
 });
 
 socket.on('todoDeleted', (data) => {
+  console.log('📨 Received todoDeleted event:', data);
   todos = todos.filter(t => t.id !== data.id);
   renderTodos();
   updateStats();

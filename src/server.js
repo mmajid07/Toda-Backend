@@ -9,6 +9,7 @@ const RedisStore = require('connect-redis').default;
 const { createClient } = require('redis');
 const { setupTodoEvents, setupTodoStore } = require('./socketHandlers/todoEvents');
 const { createAdapter } = require('@socket.io/redis-adapter');
+const db = require('./utils/database');
 
 const app = express();
 const server = http.createServer(app);
@@ -82,8 +83,19 @@ io.use((socket, next) => {
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Initialize Database
+db.connect()
+  .then(() => db.initializeSchema())
+  .then(() => {
+    console.log('✅ Database initialized successfully');
+  })
+  .catch((err) => {
+    console.error('❌ Database initialization failed:', err.message);
+    process.exit(1);
+  });
+
 // Setup todo store
-setupTodoStore(redisClient);
+setupTodoStore();
 
 // Routes
 app.get('/', (req, res) => {
@@ -143,6 +155,7 @@ io.on('connection', (socket) => {
 process.on('SIGINT', async () => {
   console.log('\n🛑 Shutting down gracefully...');
   server.close(async () => {
+    await db.close();
     await redisClient.quit();
     await pubClient.quit();
     await subClient.quit();

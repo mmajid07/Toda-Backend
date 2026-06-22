@@ -1,4 +1,24 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: todo-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: todo_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - todo-network
+
   redis:
     image: redis:7-alpine
     container_name: todo-redis
@@ -26,15 +46,24 @@ services:
       - PORT=3005
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=todo_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
       - SESSION_SECRET=your-super-secret-key-change-in-production
     restart: unless-stopped
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
       - todo-network
 
 volumes:
+  postgres-data:
+    driver: local
   redis-data:
     driver: local
 

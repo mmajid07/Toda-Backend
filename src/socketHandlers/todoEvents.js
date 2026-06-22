@@ -1,10 +1,10 @@
-const { RedisTodoStore } = require('../models/todo');
+const PostgreSQLTodoStore = require('../models/postgresqlTodoStore');
 
 let todoStore;
 
-function setupTodoStore(redisClient) {
-  console.log('[setupTodoStore] Creating RedisTodoStore...');
-  todoStore = new RedisTodoStore(redisClient);
+function setupTodoStore() {
+  console.log('[setupTodoStore] Creating PostgreSQLTodoStore...');
+  todoStore = new PostgreSQLTodoStore();
   console.log('[setupTodoStore] Done');
   return todoStore;
 }
@@ -17,7 +17,7 @@ function setupTodoEvents(io, socket) {
     try {
       const todos = await todoStore.getAllTodos();
       console.log(`[getTodos] Sending ${todos.length} todo(s) to ${socket.id}`);
-      socket.emit('todosList', todos);
+      socket.emit('todosList', todos.map(t => typeof t.toJSON === 'function' ? t.toJSON() : t));
     } catch (error) {
       console.error('[getTodos] ERROR:', error.message);
       socket.emit('error', 'Failed to fetch todos');
@@ -37,7 +37,7 @@ function setupTodoEvents(io, socket) {
       console.log('[addTodo] Calling todoStore.addTodo...');
       const todo = await todoStore.addTodo(title, description || '', priority || 'medium');
       console.log(`[addTodo] Broadcasting todoAdded to all clients | id: ${todo.id}`);
-      io.emit('todoAdded', todo.toJSON());
+      io.emit('todoAdded', todo);
     } catch (error) {
       console.error('[addTodo] ERROR:', error.message);
       socket.emit('error', 'Failed to add todo');
@@ -57,7 +57,7 @@ function setupTodoEvents(io, socket) {
       const todo = await todoStore.updateTodo(id, title, description || '');
       if (todo) {
         console.log(`[updateTodo] Broadcasting todoUpdated | id: ${id}`);
-        io.emit('todoUpdated', todo.toJSON());
+        io.emit('todoUpdated', typeof todo.toJSON === 'function' ? todo.toJSON() : todo);
       } else {
         console.warn(`[updateTodo] Todo not found: ${id}`);
         socket.emit('error', 'Todo not found');
@@ -74,7 +74,7 @@ function setupTodoEvents(io, socket) {
       const todo = await todoStore.toggleTodo(id);
       if (todo) {
         console.log(`[toggleTodo] Broadcasting todoToggled | id: ${id} | completed: ${todo.completed}`);
-        io.emit('todoToggled', todo.toJSON());
+        io.emit('todoToggled', typeof todo.toJSON === 'function' ? todo.toJSON() : todo);
       } else {
         console.warn(`[toggleTodo] Todo not found: ${id}`);
         socket.emit('error', 'Todo not found');
